@@ -11,7 +11,14 @@ from tcore.models.model import TCoRe
 from pytorch_lightning import Trainer
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.callbacks import Callback
 
+
+class SaveCheckpointEveryEpoch(Callback):
+    def on_train_epoch_end(self, trainer, pl_module):
+        checkpoint_path = f"{trainer.logger.log_dir}/manual_save_epoch{trainer.current_epoch:02d}.ckpt"
+        trainer.save_checkpoint(checkpoint_path)
+        print(f"Checkpoint saved at {checkpoint_path}")
 
 @click.command()
 @click.option("--w", type=str, required=False)
@@ -102,9 +109,10 @@ def main(w, ckpt, bb_cr, dec_cr, dec_blocks, iterative, model_cfg_path):
         num_sanity_val_steps=0,
         gpus=cfg.TRAIN.N_GPUS,
         accelerator="cuda",
+        #precision=16, # Enable mixed precision training (FP16)
         logger=tb_logger,
         max_epochs=cfg.TRAIN.MAX_EPOCH,
-        callbacks=[lr_monitor, fscore_ckpt,
+        callbacks=[SaveCheckpointEveryEpoch(), lr_monitor, fscore_ckpt,
                    precision_ckpt, recall_ckpt, cd_ckpt],
         log_every_n_steps=1,
         gradient_clip_val=0.5,
@@ -112,7 +120,6 @@ def main(w, ckpt, bb_cr, dec_cr, dec_blocks, iterative, model_cfg_path):
         resume_from_checkpoint=ckpt,
         check_val_every_n_epoch=10,
     )
-
 
     trainer.fit(model, data)
     trainer.test(model, dataloaders=data.test_dataloader())

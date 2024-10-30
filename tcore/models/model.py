@@ -200,6 +200,20 @@ class TCoRe(LightningModule):
                 # )
                 # import ipdb;ipdb.set_trace()
 
+                
+                print("final prediction")
+                o3d.visualization.draw_geometries(
+                    [pt_mesh, in_pcd],
+                    mesh_show_back_face=True,
+                    mesh_show_wireframe=True,
+                )
+                o3d.visualization.draw_geometries(
+                    [in_pcd],
+                    mesh_show_back_face=True,
+                    mesh_show_wireframe=True,
+                )
+                #import ipdb;ipdb.set_trace()
+
             self.chamfer_dist_metric.update(gt, pt_mesh)
             self.precision_recall.update(gt, pt_mesh)
 

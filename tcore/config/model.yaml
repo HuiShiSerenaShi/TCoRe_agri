@@ -1,5 +1,6 @@
-LOGDIR: ''
-PATH: './data/igg_fruit/'
+LOGDIR: './checkpoints/'
+#PATH: './data/igg_fruit/' 
+PATH: './data/dataset_sweet_pepper/'
 
 EXPERIMENT:
     ID: tcore
@@ -12,7 +13,8 @@ TRAIN:
     FREEZE_MODULES: []
     LR: 0.0001
     MAX_EPOCH: 500
-    NUM_WORKERS: 6
+    #NUM_WORKERS: 6
+    NUM_WORKERS: 4
     N_GPUS: -1
     STEP: 50
 

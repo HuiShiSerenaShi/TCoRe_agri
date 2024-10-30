@@ -26,7 +26,8 @@ class IGGFruit(Dataset):
         with open(self.data_source + '/split.json', 'r') as file:
             self.splits = json.load(file)
 
-        self.fruit = 'SweetPepper' if 'p' in self.splits['train'][0] else 'Strawberry'
+        #self.fruit = 'SweetPepper' if 'p' in self.splits['train'][0] else 'Strawberry'
+        self.fruit = 'SweetPepper' if 'lab' in self.splits['train'][0] else 'Strawberry'
 
         self.fruit_list = self.get_file_paths()
         self.precomputed_augmentation = precomputed_augmentation
@@ -42,7 +43,8 @@ class IGGFruit(Dataset):
         return aug_list
 
     def get_file_paths(self):
-        self.fragment_step = 10
+        self.fragment_step = 3
+        #self.fragment_step = 10
         fruit_list = []
         for fid in self.splits[self.split]:
             if self.sensor == 'realsense':
@@ -50,7 +52,8 @@ class IGGFruit(Dataset):
 
                 depth_frames = self.absolute_file_paths(fid, 'realsense/depth/')
                 rgb_frames = self.absolute_file_paths(fid, 'realsense/color/')
-
+                mask_frames = self.absolute_file_paths(fid, 'realsense/masks/')
+                
                 for idx in range(0, len(poses) - self.fragment_step, self.fragment_step):
 
                     fragment_dict = {}
@@ -58,6 +61,7 @@ class IGGFruit(Dataset):
                     fragment_dict['pose'] = poses[idx:idx + self.fragment_step]
                     fragment_dict['d'] = depth_frames[idx:idx + self.fragment_step]
                     fragment_dict['rgb'] = rgb_frames[idx:idx + self.fragment_step]
+                    fragment_dict['mask'] = mask_frames[idx:idx + self.fragment_step]
 
                     fruit_list.append(fragment_dict)
 
@@ -79,8 +83,8 @@ class IGGFruit(Dataset):
         else:
             pcd = o3d.geometry.PointCloud()
             K = self.load_K(os.path.join(fruit_id, 'realsense/intrinsic.json'))
-            for rgb, d, pose in zip(item['rgb'], item['d'], item['pose']):
-                frame_pcd = self.pcd_from_rgbd(rgb, d, pose, K)
+            for rgb, d, mask, pose in zip(item['rgb'], item['d'], item['mask'], item['pose']):
+                frame_pcd = self.pcd_from_rgbd(rgb, d, mask, pose, K)
                 pcd += frame_pcd
             return pcd
 
@@ -93,9 +97,10 @@ class IGGFruit(Dataset):
         return o3d.io.read_point_cloud(fruit_id + 'laser/fruit.ply')
 
     @staticmethod
-    def pcd_from_rgbd(rgb, d, pose, K):
+    def pcd_from_rgbd(rgb, d, mask, pose, K):
         rgb_frame = o3d.io.read_image(rgb)
         d_frame = np.load(d)
+        mask_frame = o3d.io.read_image(mask)
 
         extrinsic = np.eye(4)
         intrinsic = o3d.camera.PinholeCameraIntrinsic()
@@ -109,8 +114,9 @@ class IGGFruit(Dataset):
         )
 
         rgbd = o3d.geometry.RGBDImage.create_from_color_and_depth(o3d.geometry.Image(rgb_frame),
-                                                                  o3d.geometry.Image(d_frame),
-                                                                  depth_scale=1000.0,
+                                                                  o3d.geometry.Image(d_frame*np.asarray(mask_frame)),
+                                                                  #depth_scale=1000.0,
+                                                                  depth_scale=1,
                                                                   depth_trunc=1.0,
                                                                   convert_rgb_to_intensity=False)
 
